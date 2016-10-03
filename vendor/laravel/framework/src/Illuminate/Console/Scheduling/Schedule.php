@@ -39,7 +39,15 @@ class Schedule
     {
         $binary = ProcessUtils::escapeArgument((new PhpExecutableFinder)->find(false));
 
-        $artisan = defined('ARTISAN_BINARY') ? ProcessUtils::escapeArgument(ARTISAN_BINARY) : 'artisan';
+        if (defined('HHVM_VERSION')) {
+            $binary .= ' --php';
+        }
+
+        if (defined('ARTISAN_BINARY')) {
+            $artisan = ProcessUtils::escapeArgument(ARTISAN_BINARY);
+        } else {
+            $artisan = 'artisan';
+        }
 
         return $this->exec("{$binary} {$artisan} {$command}", $parameters);
     }

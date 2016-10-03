@@ -12,7 +12,6 @@
 namespace Symfony\Component\HttpKernel\Tests\Debug;
 
 use Symfony\Component\EventDispatcher\EventDispatcher;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Debug\TraceableEventDispatcher;
 use Symfony\Component\HttpKernel\HttpKernel;
 use Symfony\Component\HttpFoundation\Request;
@@ -34,7 +33,6 @@ class TraceableEventDispatcherTest extends \PHPUnit_Framework_TestCase
             '__section__',
             'kernel.request',
             'kernel.controller',
-            'kernel.controller_arguments',
             'controller',
             'kernel.response',
             'kernel.terminate',
@@ -110,11 +108,10 @@ class TraceableEventDispatcherTest extends \PHPUnit_Framework_TestCase
 
     protected function getHttpKernel($dispatcher, $controller)
     {
-        $controllerResolver = $this->getMock('Symfony\Component\HttpKernel\Controller\ControllerResolverInterface');
-        $controllerResolver->expects($this->once())->method('getController')->will($this->returnValue($controller));
-        $argumentResolver = $this->getMock('Symfony\Component\HttpKernel\Controller\ArgumentResolverInterface');
-        $argumentResolver->expects($this->once())->method('getArguments')->will($this->returnValue(array()));
+        $resolver = $this->getMock('Symfony\Component\HttpKernel\Controller\ControllerResolverInterface');
+        $resolver->expects($this->once())->method('getController')->will($this->returnValue($controller));
+        $resolver->expects($this->once())->method('getArguments')->will($this->returnValue(array()));
 
-        return new HttpKernel($dispatcher, $controllerResolver, new RequestStack(), $argumentResolver);
+        return new HttpKernel($dispatcher, $resolver);
     }
 }

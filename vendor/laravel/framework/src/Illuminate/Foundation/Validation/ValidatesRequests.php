@@ -7,7 +7,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\UrlGenerator;
 use Illuminate\Contracts\Validation\Factory;
 use Illuminate\Contracts\Validation\Validator;
-use Illuminate\Validation\ValidationException;
 
 trait ValidatesRequests
 {
@@ -66,7 +65,7 @@ trait ValidatesRequests
      * @param  array  $customAttributes
      * @return void
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws \Illuminate\Foundation\Validation\ValidationException
      */
     public function validateWithBag($errorBag, Request $request, array $rules, array $messages = [], array $customAttributes = [])
     {
@@ -82,7 +81,7 @@ trait ValidatesRequests
      * @param  \Illuminate\Contracts\Validation\Validator  $validator
      * @return void
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws \Illuminate\Foundation\Validation\ValidationException
      */
     protected function throwValidationException(Request $request, $validator)
     {
@@ -96,11 +95,11 @@ trait ValidatesRequests
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  array  $errors
-     * @return \Symfony\Component\HttpFoundation\Response
+     * @return \Illuminate\Http\Response
      */
     protected function buildFailedValidationResponse(Request $request, array $errors)
     {
-        if ($request->expectsJson()) {
+        if (($request->ajax() && ! $request->pjax()) || $request->wantsJson()) {
             return new JsonResponse($errors, 422);
         }
 

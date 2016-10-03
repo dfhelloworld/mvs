@@ -29,17 +29,16 @@ class JsonResponse extends Response
 
     // Encode <, >, ', &, and " for RFC4627-compliant JSON, which may also be embedded into HTML.
     // 15 === JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT
-    const DEFAULT_ENCODING_OPTIONS = 15;
-
-    protected $encodingOptions = self::DEFAULT_ENCODING_OPTIONS;
+    protected $encodingOptions = 15;
 
     /**
+     * Constructor.
+     *
      * @param mixed $data    The response data
      * @param int   $status  The response status code
      * @param array $headers An array of response headers
-     * @param bool  $json    If the data is already a JSON string
      */
-    public function __construct($data = null, $status = 200, $headers = array(), $json = false)
+    public function __construct($data = null, $status = 200, $headers = array())
     {
         parent::__construct('', $status, $headers);
 
@@ -47,7 +46,7 @@ class JsonResponse extends Response
             $data = new \ArrayObject();
         }
 
-        $json ? $this->setJson($data) : $this->setData($data);
+        $this->setData($data);
     }
 
     /**
@@ -86,22 +85,6 @@ class JsonResponse extends Response
     }
 
     /**
-     * Sets a raw string containing a JSON document to be sent.
-     *
-     * @param string $json
-     *
-     * @return JsonResponse
-     *
-     * @throws \InvalidArgumentException
-     */
-    public function setJson($json)
-    {
-        $this->data = $json;
-
-        return $this->update();
-    }
-
-    /**
      * Sets the data to be sent as JSON.
      *
      * @param mixed $data
@@ -135,7 +118,9 @@ class JsonResponse extends Response
             throw new \InvalidArgumentException(json_last_error_msg());
         }
 
-        return $this->setJson($data);
+        $this->data = $data;
+
+        return $this->update();
     }
 
     /**

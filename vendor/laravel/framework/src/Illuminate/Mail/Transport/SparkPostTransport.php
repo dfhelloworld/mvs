@@ -70,9 +70,7 @@ class SparkPostTransport extends Transport
             $options['json']['options'] = $this->options;
         }
 
-        $this->client->post('https://api.sparkpost.com/api/v1/transmissions', $options);
-
-        return $this->numberOfRecipients($message);
+        return $this->client->post('https://api.sparkpost.com/api/v1/transmissions', $options);
     }
 
     /**

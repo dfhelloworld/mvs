@@ -74,6 +74,10 @@ class Composer
 
         $binary = ProcessUtils::escapeArgument((new PhpExecutableFinder)->find(false));
 
+        if (defined('HHVM_VERSION')) {
+            $binary .= ' --php';
+        }
+
         return "{$binary} composer.phar";
     }
 

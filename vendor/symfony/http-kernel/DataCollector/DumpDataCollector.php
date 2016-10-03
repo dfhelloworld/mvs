@@ -165,8 +165,6 @@ class DumpDataCollector extends DataCollector implements DataDumperInterface
             return 'a:0:{}';
         }
 
-        $this->data[] = $this->fileLinkFormat;
-        $this->data[] = $this->charset;
         $ser = serialize($this->data);
         $this->data = array();
         $this->dataCount = 0;
@@ -181,10 +179,8 @@ class DumpDataCollector extends DataCollector implements DataDumperInterface
     public function unserialize($data)
     {
         parent::unserialize($data);
-        $charset = array_pop($this->data);
-        $fileLinkFormat = array_pop($this->data);
         $this->dataCount = count($this->data);
-        self::__construct($this->stopwatch, $fileLinkFormat, $charset);
+        self::__construct($this->stopwatch);
     }
 
     public function getDumpsCount()
@@ -205,7 +201,9 @@ class DumpDataCollector extends DataCollector implements DataDumperInterface
 
         foreach ($this->data as $dump) {
             $dumper->dump($dump['data']->withMaxDepth($maxDepthLimit)->withMaxItemsPerDepth($maxItemsPerDepth));
-            $dump['data'] = stream_get_contents($data, -1, 0);
+
+            rewind($data);
+            $dump['data'] = stream_get_contents($data);
             ftruncate($data, 0);
             rewind($data);
             $dumps[] = $dump;

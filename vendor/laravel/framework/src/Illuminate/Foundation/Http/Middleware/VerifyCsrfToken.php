@@ -125,8 +125,8 @@ class VerifyCsrfToken
      * Add the CSRF token to the response cookies.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  \Symfony\Component\HttpFoundation\Response  $response
-     * @return \Symfony\Component\HttpFoundation\Response
+     * @param  \Illuminate\Http\Response  $response
+     * @return \Illuminate\Http\Response
      */
     protected function addCookieToResponse($request, $response)
     {

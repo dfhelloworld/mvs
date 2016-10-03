@@ -342,12 +342,11 @@ class Blueprint
      *
      * @param  string|array  $columns
      * @param  string  $name
-     * @param  string|null  $algorithm
      * @return \Illuminate\Support\Fluent
      */
-    public function primary($columns, $name = null, $algorithm = null)
+    public function primary($columns, $name = null)
     {
-        return $this->indexCommand('primary', $columns, $name, $algorithm);
+        return $this->indexCommand('primary', $columns, $name);
     }
 
     /**
@@ -355,12 +354,11 @@ class Blueprint
      *
      * @param  string|array  $columns
      * @param  string  $name
-     * @param  string|null  $algorithm
      * @return \Illuminate\Support\Fluent
      */
-    public function unique($columns, $name = null, $algorithm = null)
+    public function unique($columns, $name = null)
     {
-        return $this->indexCommand('unique', $columns, $name, $algorithm);
+        return $this->indexCommand('unique', $columns, $name);
     }
 
     /**
@@ -368,12 +366,11 @@ class Blueprint
      *
      * @param  string|array  $columns
      * @param  string  $name
-     * @param  string|null  $algorithm
      * @return \Illuminate\Support\Fluent
      */
-    public function index($columns, $name = null, $algorithm = null)
+    public function index($columns, $name = null)
     {
-        return $this->indexCommand('index', $columns, $name, $algorithm);
+        return $this->indexCommand('index', $columns, $name);
     }
 
     /**
@@ -921,10 +918,9 @@ class Blueprint
      * @param  string        $type
      * @param  string|array  $columns
      * @param  string        $index
-     * @param  string|null   $algorithm
      * @return \Illuminate\Support\Fluent
      */
-    protected function indexCommand($type, $columns, $index, $algorithm = null)
+    protected function indexCommand($type, $columns, $index)
     {
         $columns = (array) $columns;
 
@@ -935,7 +931,7 @@ class Blueprint
             $index = $this->createIndexName($type, $columns);
         }
 
-        return $this->addCommand($type, compact('index', 'columns', 'algorithm'));
+        return $this->addCommand($type, compact('index', 'columns'));
     }
 
     /**

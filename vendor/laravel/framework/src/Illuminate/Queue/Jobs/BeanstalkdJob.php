@@ -44,6 +44,16 @@ class BeanstalkdJob extends Job implements JobContract
     }
 
     /**
+     * Fire the job.
+     *
+     * @return void
+     */
+    public function fire()
+    {
+        $this->resolveAndFire(json_decode($this->getRawBody(), true));
+    }
+
+    /**
      * Get the raw body string for the job.
      *
      * @return string
@@ -112,6 +122,16 @@ class BeanstalkdJob extends Job implements JobContract
     public function getJobId()
     {
         return $this->job->getId();
+    }
+
+    /**
+     * Get the IoC container instance.
+     *
+     * @return \Illuminate\Container\Container
+     */
+    public function getContainer()
+    {
+        return $this->container;
     }
 
     /**

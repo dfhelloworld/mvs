@@ -154,7 +154,7 @@ class TransportManager extends Manager
      * Get a fresh Guzzle HTTP client instance.
      *
      * @param  array  $config
-     * @return \GuzzleHttp\Client
+     * @return HttpClient
      */
     protected function getHttpClient($config)
     {

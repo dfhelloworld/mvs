@@ -2,66 +2,56 @@
 
 namespace Illuminate\Http;
 
-use Illuminate\Container\Container;
 use Illuminate\Support\Traits\Macroable;
-use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
 use Symfony\Component\HttpFoundation\File\UploadedFile as SymfonyUploadedFile;
 
 class UploadedFile extends SymfonyUploadedFile
 {
-    use FileHelpers, Macroable;
+    use Macroable;
 
     /**
-     * Store the uploaded file on a filesystem disk.
+     * Get the fully qualified path to the file.
      *
-     * @param  string  $path
-     * @param  string|null  $disk
-     * @return string|false
+     * @return string
      */
-    public function store($path, $disk = null)
+    public function path()
     {
-        return $this->storeAs($path, $this->hashName(), $disk);
+        return $this->getRealPath();
     }
 
     /**
-     * Store the uploaded file on a filesystem disk with public visibility.
+     * Get the file's extension.
      *
-     * @param  string  $path
-     * @param  string|null  $disk
-     * @return string|false
+     * @return string
      */
-    public function storePublicly($path, $disk = null)
+    public function extension()
     {
-        return $this->storeAs($path, $this->hashName(), $disk, 'public');
+        return $this->guessExtension();
     }
 
     /**
-     * Store the uploaded file on a filesystem disk with public visibility.
+     * Get the file's extension supplied by the client.
      *
-     * @param  string  $path
-     * @param  string  $name
-     * @param  string|null  $disk
-     * @return string|false
+     * @return string
      */
-    public function storePubliclyAs($path, $name, $disk = null)
+    public function clientExtension()
     {
-        return $this->storeAs($path, $name, $disk, 'public');
+        return $this->guessClientExtension();
     }
 
     /**
-     * Store the uploaded file on a filesystem disk.
+     * Get a filename for the file that is the MD5 hash of the contents.
      *
      * @param  string  $path
-     * @param  string  $name
-     * @param  string|null  $disk
-     * @param  string|null  $visibility
-     * @return string|false
+     * @return string
      */
-    public function storeAs($path, $name, $disk = null, $visibility = null)
+    public function hashName($path = null)
     {
-        $factory = Container::getInstance()->make(FilesystemFactory::class);
+        if ($path) {
+            $path = rtrim($path, '/').'/';
+        }
 
-        return $factory->disk($disk)->putFileAs($path, $this, $name, $visibility);
+        return $path.md5_file($this->path()).'.'.$this->extension();
     }
 
     /**

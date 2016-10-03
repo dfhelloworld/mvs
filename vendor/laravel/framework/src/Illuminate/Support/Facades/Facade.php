@@ -36,32 +36,9 @@ abstract class Facade
     }
 
     /**
-     * Convert the facade into a Mockery spy.
-     *
-     * @return void
-     */
-    public static function spy()
-    {
-        $name = static::getFacadeAccessor();
-
-        if (static::isMock()) {
-            $mock = static::$resolvedInstance[$name];
-        } else {
-            $class = static::getMockableClass($name);
-
-            $mock = $class ? Mockery::spy($class) : Mockery::spy();
-
-            static::$resolvedInstance[$name] = $mock;
-
-            if (isset(static::$app)) {
-                static::$app->instance($name, $mock);
-            }
-        }
-    }
-
-    /**
      * Initiate a mock expectation on the facade.
      *
+     * @param  mixed
      * @return \Mockery\Expectation
      */
     public static function shouldReceive()
@@ -118,8 +95,7 @@ abstract class Facade
     {
         $name = static::getFacadeAccessor();
 
-        return isset(static::$resolvedInstance[$name]) &&
-               static::$resolvedInstance[$name] instanceof MockInterface;
+        return isset(static::$resolvedInstance[$name]) && static::$resolvedInstance[$name] instanceof MockInterface;
     }
 
     /**
@@ -234,6 +210,19 @@ abstract class Facade
             throw new RuntimeException('A facade root has not been set.');
         }
 
-        return $instance->$method(...$args);
+        switch (count($args)) {
+            case 0:
+                return $instance->$method();
+            case 1:
+                return $instance->$method($args[0]);
+            case 2:
+                return $instance->$method($args[0], $args[1]);
+            case 3:
+                return $instance->$method($args[0], $args[1], $args[2]);
+            case 4:
+                return $instance->$method($args[0], $args[1], $args[2], $args[3]);
+            default:
+                return call_user_func_array([$instance, $method], $args);
+        }
     }
 }

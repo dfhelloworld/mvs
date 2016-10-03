@@ -167,7 +167,7 @@ class ProcessBuilder
     /**
      * Sets the input of the process.
      *
-     * @param resource|scalar|\Traversable|null $input The input content
+     * @param mixed $input The input as a string
      *
      * @return ProcessBuilder
      *

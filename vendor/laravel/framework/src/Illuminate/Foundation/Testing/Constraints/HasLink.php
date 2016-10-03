@@ -89,23 +89,7 @@ class HasLink extends PageConstraint
      */
     public function getFailureDescription()
     {
-        $description = "has a link with the text [{$this->text}]";
-
-        if ($this->url) {
-            $description .= " and the URL [{$this->url}]";
-        }
-
-        return $description;
-    }
-
-    /**
-     * Returns the reversed description of the failure.
-     *
-     * @return string
-     */
-    protected function getReverseFailureDescription()
-    {
-        $description = "does not have a link with the text [{$this->text}]";
+        $description = "a link with the text [{$this->text}]";
 
         if ($this->url) {
             $description .= " and the URL [{$this->url}]";

@@ -57,11 +57,11 @@ class ConnectionFactory
      */
     protected function createSingleConnection(array $config)
     {
-        $pdo = $this->createPdoResolver($config);
+        $pdo = function () use ($config) {
+            return $this->createConnector($config)->connect($config);
+        };
 
-        return $this->createConnection(
-            $config['driver'], $pdo, $config['database'], $config['prefix'], $config
-        );
+        return $this->createConnection($config['driver'], $pdo, $config['database'], $config['prefix'], $config);
     }
 
     /**
@@ -81,24 +81,13 @@ class ConnectionFactory
      * Create a new PDO instance for reading.
      *
      * @param  array  $config
-     * @return \Closure
+     * @return \PDO
      */
     protected function createReadPdo(array $config)
     {
-        return $this->createPdoResolver($this->getReadConfig($config));
-    }
+        $readConfig = $this->getReadConfig($config);
 
-    /**
-     * Create a new Closure that resolves to a PDO instance.
-     *
-     * @param  array  $config
-     * @return \Closure
-     */
-    protected function createPdoResolver(array $config)
-    {
-        return function () use ($config) {
-            return $this->createConnector($config)->connect($config);
-        };
+        return $this->createConnector($readConfig)->connect($readConfig);
     }
 
     /**

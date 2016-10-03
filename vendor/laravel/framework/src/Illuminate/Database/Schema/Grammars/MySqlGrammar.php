@@ -170,9 +170,7 @@ class MySqlGrammar extends Grammar
 
         $index = $this->wrap($command->index);
 
-        $algorithm = $command->algorithm ? ' using '.$command->algorithm : '';
-
-        return "alter table {$table} add {$type} {$index}{$algorithm}($columns)";
+        return "alter table {$table} add {$type} {$index}($columns)";
     }
 
     /**
@@ -376,7 +374,7 @@ class MySqlGrammar extends Grammar
     }
 
     /**
-     * Create the column definition for an integer type.
+     * Create the column definition for a integer type.
      *
      * @param  \Illuminate\Support\Fluent  $column
      * @return string

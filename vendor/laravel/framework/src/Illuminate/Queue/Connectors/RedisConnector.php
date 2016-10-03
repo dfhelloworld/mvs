@@ -43,10 +43,12 @@ class RedisConnector implements ConnectorInterface
      */
     public function connect(array $config)
     {
-        return new RedisQueue(
-            $this->redis, $config['queue'],
-            Arr::get($config, 'connection', $this->connection),
-            Arr::get($config, 'retry_after', 60)
+        $queue = new RedisQueue(
+            $this->redis, $config['queue'], Arr::get($config, 'connection', $this->connection)
         );
+
+        $queue->setExpire(Arr::get($config, 'expire', 60));
+
+        return $queue;
     }
 }

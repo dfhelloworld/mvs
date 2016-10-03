@@ -3,7 +3,6 @@
 namespace Illuminate\Pipeline;
 
 use Closure;
-use RuntimeException;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Pipeline\Pipeline as PipelineContract;
 
@@ -40,10 +39,10 @@ class Pipeline implements PipelineContract
     /**
      * Create a new class instance.
      *
-     * @param  \Illuminate\Contracts\Container\Container|null  $container
+     * @param  \Illuminate\Contracts\Container\Container  $container
      * @return void
      */
-    public function __construct(Container $container = null)
+    public function __construct(Container $container)
     {
         $this->container = $container;
     }
@@ -97,11 +96,11 @@ class Pipeline implements PipelineContract
     {
         $firstSlice = $this->getInitialSlice($destination);
 
-        $callable = array_reduce(
-            array_reverse($this->pipes), $this->getSlice(), $firstSlice
-        );
+        $pipes = array_reverse($this->pipes);
 
-        return $callable($this->passable);
+        return call_user_func(
+            array_reduce($pipes, $this->getSlice(), $firstSlice), $this->passable
+        );
     }
 
     /**
@@ -117,14 +116,14 @@ class Pipeline implements PipelineContract
                     // If the pipe is an instance of a Closure, we will just call it directly but
                     // otherwise we'll resolve the pipes out of the container and call it with
                     // the appropriate method and arguments, returning the results back out.
-                    return $pipe($passable, $stack);
+                    return call_user_func($pipe, $passable, $stack);
                 } elseif (! is_object($pipe)) {
                     list($name, $parameters) = $this->parsePipeString($pipe);
 
                     // If the pipe is a string we will parse the string and resolve the class out
                     // of the dependency injection container. We can then build a callable and
                     // execute the pipe function giving in the parameters that are required.
-                    $pipe = $this->getContainer()->make($name);
+                    $pipe = $this->container->make($name);
 
                     $parameters = array_merge([$passable, $stack], $parameters);
                 } else {
@@ -134,7 +133,7 @@ class Pipeline implements PipelineContract
                     $parameters = [$passable, $stack];
                 }
 
-                return $pipe->{$this->method}(...$parameters);
+                return call_user_func_array([$pipe, $this->method], $parameters);
             };
         };
     }
@@ -148,7 +147,7 @@ class Pipeline implements PipelineContract
     protected function getInitialSlice(Closure $destination)
     {
         return function ($passable) use ($destination) {
-            return $destination($passable);
+            return call_user_func($destination, $passable);
         };
     }
 
@@ -167,20 +166,5 @@ class Pipeline implements PipelineContract
         }
 
         return [$name, $parameters];
-    }
-
-    /**
-     * Get the container instance.
-     *
-     * @return \Illuminate\Contracts\Container\Container
-     * @throws \RuntimeException
-     */
-    protected function getContainer()
-    {
-        if (! $this->container) {
-            throw new RuntimeException('A container instance has not been passed to the Pipeline.');
-        }
-
-        return $this->container;
     }
 }

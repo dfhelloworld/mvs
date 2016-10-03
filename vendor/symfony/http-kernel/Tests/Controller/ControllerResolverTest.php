@@ -137,9 +137,6 @@ class ControllerResolverTest extends \PHPUnit_Framework_TestCase
         );
     }
 
-    /**
-     * @group legacy
-     */
     public function testGetArguments()
     {
         $resolver = $this->createControllerResolver();
@@ -203,7 +200,6 @@ class ControllerResolverTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @requires PHP 5.6
-     * @group legacy
      */
     public function testGetVariadicArguments()
     {

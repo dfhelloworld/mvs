@@ -3,10 +3,7 @@
 namespace Illuminate\Filesystem;
 
 use RuntimeException;
-use Illuminate\Http\File;
-use Illuminate\Support\Str;
 use InvalidArgumentException;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use League\Flysystem\AdapterInterface;
 use League\Flysystem\FilesystemInterface;
@@ -75,10 +72,6 @@ class FilesystemAdapter implements FilesystemContract, CloudFilesystemContract
      */
     public function put($path, $contents, $visibility = null)
     {
-        if ($contents instanceof File || $contents instanceof UploadedFile) {
-            return $this->putFile($path, $contents, $visibility);
-        }
-
         if ($visibility = $this->parseVisibility($visibility)) {
             $config = ['visibility' => $visibility];
         } else {
@@ -90,41 +83,6 @@ class FilesystemAdapter implements FilesystemContract, CloudFilesystemContract
         } else {
             return $this->driver->put($path, $contents, $config);
         }
-    }
-
-    /**
-     * Store the uploaded file on the disk.
-     *
-     * @param  string  $path
-     * @param  \Illuminate\Http\UploadedFile  $file
-     * @param  string  $visibility
-     * @return string|false
-     */
-    public function putFile($path, $file, $visibility = null)
-    {
-        return $this->putFileAs($path, $file, $file->hashName(), $visibility);
-    }
-
-    /**
-     * Store the uploaded file on the disk with a given name.
-     *
-     * @param  string  $path
-     * @param  \Illuminate\Http\File|\Illuminate\Http\UploadedFile  $file
-     * @param  string  $name
-     * @param  string  $visibility
-     * @return string|false
-     */
-    public function putFileAs($path, $file, $name, $visibility = null)
-    {
-        $stream = fopen($file->getRealPath(), 'r+');
-
-        $result = $this->put($path = trim($path.'/'.$name, '/'), $stream, $visibility);
-
-        if (is_resource($stream)) {
-            fclose($stream);
-        }
-
-        return $result ? $path : false;
     }
 
     /**
@@ -159,7 +117,6 @@ class FilesystemAdapter implements FilesystemContract, CloudFilesystemContract
      *
      * @param  string  $path
      * @param  string  $data
-     * @param  string  $separator
      * @return int
      */
     public function prepend($path, $data, $separator = PHP_EOL)
@@ -176,7 +133,6 @@ class FilesystemAdapter implements FilesystemContract, CloudFilesystemContract
      *
      * @param  string  $path
      * @param  string  $data
-     * @param  string  $separator
      * @return int
      */
     public function append($path, $data, $separator = PHP_EOL)
@@ -198,19 +154,15 @@ class FilesystemAdapter implements FilesystemContract, CloudFilesystemContract
     {
         $paths = is_array($paths) ? $paths : func_get_args();
 
-        $success = true;
-
         foreach ($paths as $path) {
             try {
-                if (! $this->driver->delete($path)) {
-                    $success = false;
-                }
+                $this->driver->delete($path);
             } catch (FileNotFoundException $e) {
-                $success = false;
+                //
             }
         }
 
-        return $success;
+        return true;
     }
 
     /**
@@ -280,16 +232,14 @@ class FilesystemAdapter implements FilesystemContract, CloudFilesystemContract
     {
         $adapter = $this->driver->getAdapter();
 
-        if (method_exists($adapter, 'getUrl')) {
-            return $adapter->getUrl($path);
-        } elseif ($adapter instanceof AwsS3Adapter) {
+        if ($adapter instanceof AwsS3Adapter) {
             $path = $adapter->getPathPrefix().$path;
 
             return $adapter->getClient()->getObjectUrl($adapter->getBucket(), $path);
         } elseif ($adapter instanceof LocalAdapter) {
-            $path = '/storage/'.$path;
-
-            return Str::contains($path, '/storage/public') ? Str::replaceFirst('/public', '', $path) : $path;
+            return '/storage/'.$path;
+        } elseif (method_exists($adapter, 'getUrl')) {
+            return $adapter->getUrl($path);
         } else {
             throw new RuntimeException('This driver does not support retrieving URLs.');
         }

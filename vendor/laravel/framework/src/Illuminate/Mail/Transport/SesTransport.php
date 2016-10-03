@@ -32,13 +32,11 @@ class SesTransport extends Transport
     {
         $this->beforeSendPerformed($message);
 
-        $this->ses->sendRawEmail([
+        return $this->ses->sendRawEmail([
             'Source' => key($message->getSender() ?: $message->getFrom()),
             'RawMessage' => [
                 'Data' => $message->toString(),
             ],
         ]);
-
-        return $this->numberOfRecipients($message);
     }
 }

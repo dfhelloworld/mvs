@@ -7,15 +7,8 @@ use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Contracts\Encryption\EncryptException;
 use Illuminate\Contracts\Encryption\Encrypter as EncrypterContract;
 
-class Encrypter implements EncrypterContract
+class Encrypter extends BaseEncrypter implements EncrypterContract
 {
-    /**
-     * The encryption key.
-     *
-     * @var string
-     */
-    protected $key;
-
     /**
      * The algorithm used for encryption.
      *
@@ -68,7 +61,7 @@ class Encrypter implements EncrypterContract
      */
     public function encrypt($value)
     {
-        $iv = random_bytes(16);
+        $iv = random_bytes($this->getIvSize());
 
         $value = \openssl_encrypt(serialize($value), $this->cipher, $this->key, 0, $iv);
 
@@ -114,76 +107,12 @@ class Encrypter implements EncrypterContract
     }
 
     /**
-     * Create a MAC for the given value.
+     * Get the IV size for the cipher.
      *
-     * @param  string  $iv
-     * @param  string  $value
-     * @return string
+     * @return int
      */
-    protected function hash($iv, $value)
+    protected function getIvSize()
     {
-        return hash_hmac('sha256', $iv.$value, $this->key);
-    }
-
-    /**
-     * Get the JSON array from the given payload.
-     *
-     * @param  string  $payload
-     * @return array
-     *
-     * @throws \Illuminate\Contracts\Encryption\DecryptException
-     */
-    protected function getJsonPayload($payload)
-    {
-        $payload = json_decode(base64_decode($payload), true);
-
-        // If the payload is not valid JSON or does not have the proper keys set we will
-        // assume it is invalid and bail out of the routine since we will not be able
-        // to decrypt the given value. We'll also check the MAC for this encryption.
-        if (! $this->validPayload($payload)) {
-            throw new DecryptException('The payload is invalid.');
-        }
-
-        if (! $this->validMac($payload)) {
-            throw new DecryptException('The MAC is invalid.');
-        }
-
-        return $payload;
-    }
-
-    /**
-     * Verify that the encryption payload is valid.
-     *
-     * @param  mixed  $payload
-     * @return bool
-     */
-    protected function validPayload($payload)
-    {
-        return is_array($payload) && isset($payload['iv'], $payload['value'], $payload['mac']);
-    }
-
-    /**
-     * Determine if the MAC for the given payload is valid.
-     *
-     * @param  array  $payload
-     * @return bool
-     */
-    protected function validMac(array $payload)
-    {
-        $bytes = random_bytes(16);
-
-        $calcMac = hash_hmac('sha256', $this->hash($payload['iv'], $payload['value']), $bytes, true);
-
-        return hash_equals(hash_hmac('sha256', $payload['mac'], $bytes, true), $calcMac);
-    }
-
-    /**
-     * Get the encryption key.
-     *
-     * @return string
-     */
-    public function getKey()
-    {
-        return $this->key;
+        return 16;
     }
 }

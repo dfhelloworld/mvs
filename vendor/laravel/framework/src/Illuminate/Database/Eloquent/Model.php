@@ -183,6 +183,13 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
     protected $with = [];
 
     /**
+     * The class name to be used in polymorphic relations.
+     *
+     * @var string
+     */
+    protected $morphClass;
+
+    /**
      * Indicates if the model exists.
      *
      * @var bool
@@ -457,8 +464,13 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
      */
     public function forceFill(array $attributes)
     {
-        return static::unguarded(function () use ($attributes) {
-            return $this->fill($attributes);
+        // Since some versions of PHP have a bug that prevents it from properly
+        // binding the late static context in a closure, we will first store
+        // the model in a variable, which we will then use in the closure.
+        $model = $this;
+
+        return static::unguarded(function () use ($model, $attributes) {
+            return $model->fill($attributes);
         });
     }
 
@@ -572,8 +584,13 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
      */
     public static function forceCreate(array $attributes)
     {
-        return static::unguarded(function () use ($attributes) {
-            return (new static)->create($attributes);
+        // Since some versions of PHP have a bug that prevents it from properly
+        // binding the late static context in a closure, we will first store
+        // the model in a variable, which we will then use in the closure.
+        $model = new static;
+
+        return static::unguarded(function () use ($model, $attributes) {
+            return $model->create($attributes);
         });
     }
 
@@ -650,7 +667,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
 
         $key = $this->getKeyName();
 
-        return static::newQueryWithoutScopes()->with($with)->where($key, $this->getKey())->first();
+        return static::with($with)->where($key, $this->getKey())->first();
     }
 
     /**
@@ -805,10 +822,10 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
         if (is_null($name)) {
             list($current, $caller) = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
 
-            $name = $caller['function'];
+            $name = Str::snake($caller['function']);
         }
 
-        list($type, $id) = $this->getMorphs(Str::snake($name), $type, $id);
+        list($type, $id) = $this->getMorphs($name, $type, $id);
 
         // If the type value is null it is probably safe to assume we're eager loading
         // the relationship. In this case we'll just pass in a dummy query where we
@@ -1023,7 +1040,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
     {
         $self = __FUNCTION__;
 
-        $caller = Arr::first(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS), function ($trace) use ($self) {
+        $caller = Arr::first(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS), function ($key, $trace) use ($self) {
             $caller = $trace['function'];
 
             return ! in_array($caller, Model::$manyMethods) && $caller != $self;
@@ -1401,7 +1418,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
      *
      * @param  array  $attributes
      * @param  array  $options
-     * @return bool
+     * @return bool|int
      */
     public function update(array $attributes = [], array $options = [])
     {
@@ -1461,15 +1478,14 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
         // that is already in this database using the current IDs in this "where"
         // clause to only update this model. Otherwise, we'll just insert them.
         if ($this->exists) {
-            $saved = $this->isDirty() ?
-                        $this->performUpdate($query, $options) : true;
+            $saved = $this->performUpdate($query, $options);
         }
 
         // If the model is brand new, we'll insert it into our database and set the
         // ID attribute on the model to the value of the newly inserted row's ID
         // which is typically an auto-increment value managed by the database.
         else {
-            $saved = $this->performInsert($query);
+            $saved = $this->performInsert($query, $options);
         }
 
         if ($saved) {
@@ -1515,34 +1531,38 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
      * Perform a model update operation.
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @param  array                                  $options
+     * @param  array  $options
      * @return bool
      */
     protected function performUpdate(Builder $query, array $options = [])
     {
-        // If the updating event returns false, we will cancel the update operation so
-        // developers can hook Validation systems into their models and cancel this
-        // operation if the model does not pass validation. Otherwise, we update.
-        if ($this->fireModelEvent('updating') === false) {
-            return false;
-        }
-
-        // First we need to create a fresh query instance and touch the creation and
-        // update timestamp on the model which are maintained by us for developer
-        // convenience. Then we will just continue saving the model instances.
-        if ($this->timestamps && Arr::get($options, 'touch', true)) {
-            $this->updateTimestamps();
-        }
-
-        // Once we have run the update operation, we will fire the "updated" event for
-        // this model instance. This will allow developers to hook into these after
-        // models are updated, giving them a chance to do any special processing.
         $dirty = $this->getDirty();
 
         if (count($dirty) > 0) {
-            $this->setKeysForSaveQuery($query)->update($dirty);
+            // If the updating event returns false, we will cancel the update operation so
+            // developers can hook Validation systems into their models and cancel this
+            // operation if the model does not pass validation. Otherwise, we update.
+            if ($this->fireModelEvent('updating') === false) {
+                return false;
+            }
 
-            $this->fireModelEvent('updated', false);
+            // First we need to create a fresh query instance and touch the creation and
+            // update timestamp on the model which are maintained by us for developer
+            // convenience. Then we will just continue saving the model instances.
+            if ($this->timestamps && Arr::get($options, 'timestamps', true)) {
+                $this->updateTimestamps();
+            }
+
+            // Once we have run the update operation, we will fire the "updated" event for
+            // this model instance. This will allow developers to hook into these after
+            // models are updated, giving them a chance to do any special processing.
+            $dirty = $this->getDirty();
+
+            if (count($dirty) > 0) {
+                $numRows = $this->setKeysForSaveQuery($query)->update($dirty);
+
+                $this->fireModelEvent('updated', false);
+            }
         }
 
         return true;
@@ -1552,9 +1572,10 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
      * Perform a model insert operation.
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  array  $options
      * @return bool
      */
-    protected function performInsert(Builder $query)
+    protected function performInsert(Builder $query, array $options = [])
     {
         if ($this->fireModelEvent('creating') === false) {
             return false;
@@ -1563,7 +1584,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
         // First we'll need to create a fresh query instance and touch the creation and
         // update timestamps on this model, which are maintained by us for developer
         // convenience. After, we will just continue saving these model instances.
-        if ($this->timestamps) {
+        if ($this->timestamps && Arr::get($options, 'timestamps', true)) {
             $this->updateTimestamps();
         }
 
@@ -2030,7 +2051,7 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
             return array_search($class, $morphMap, true);
         }
 
-        return $class;
+        return $this->morphClass ?: $class;
     }
 
     /**
@@ -2134,6 +2155,19 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
         $this->hidden = array_unique(array_merge($this->hidden, $attributes));
 
         return $this;
+    }
+
+    /**
+     * Make the given, typically hidden, attributes visible.
+     *
+     * @param  array|string  $attributes
+     * @return $this
+     *
+     * @deprecated since version 5.2. Use the "makeVisible" method directly.
+     */
+    public function withHidden($attributes)
+    {
+        return $this->makeVisible($attributes);
     }
 
     /**
@@ -2970,10 +3004,10 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
     /**
      * Prepare a date for array / JSON serialization.
      *
-     * @param  \DateTimeInterface  $date
+     * @param  \DateTime  $date
      * @return string
      */
-    protected function serializeDate(DateTimeInterface $date)
+    protected function serializeDate(DateTime $date)
     {
         return $date->format($this->getDateFormat());
     }
@@ -3047,19 +3081,6 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
         $instance->setRawAttributes($attributes);
 
         return $instance->setRelations($this->relations);
-    }
-
-    /**
-     * Determine if two models have the same ID and belong to the same table.
-     *
-     * @param  \Illuminate\Database\Eloquent\Model  $model
-     * @return bool
-     */
-    public function is(Model $model)
-    {
-        return $this->getKey() === $model->getKey() &&
-               $this->getTable() === $model->getTable() &&
-               $this->getConnectionName() === $model->getConnectionName();
     }
 
     /**
@@ -3152,17 +3173,6 @@ abstract class Model implements ArrayAccess, Arrayable, Jsonable, JsonSerializab
         }
 
         return false;
-    }
-
-    /**
-     * Determine if the model or given attribute(s) have remained the same.
-     *
-     * @param  array|string|null  $attributes
-     * @return bool
-     */
-    public function isClean($attributes = null)
-    {
-        return ! $this->isDirty(...func_get_args());
     }
 
     /**

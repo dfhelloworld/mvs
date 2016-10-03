@@ -118,7 +118,7 @@ class Gate implements GateContract
         return function () use ($callback) {
             list($class, $method) = explode('@', $callback);
 
-            return $this->resolvePolicy($class)->{$method}(...func_get_args());
+            return call_user_func_array([$this->resolvePolicy($class), $method], func_get_args());
         };
     }
 
@@ -260,9 +260,13 @@ class Gate implements GateContract
      */
     protected function callAuthCallback($user, $ability, array $arguments)
     {
-        $callback = $this->resolveAuthCallback($user, $ability, $arguments);
+        $callback = $this->resolveAuthCallback(
+            $user, $ability, $arguments
+        );
 
-        return $callback($user, ...$arguments);
+        return call_user_func_array(
+            $callback, array_merge([$user], $arguments)
+        );
     }
 
     /**
@@ -278,7 +282,7 @@ class Gate implements GateContract
         $arguments = array_merge([$user, $ability], [$arguments]);
 
         foreach ($this->beforeCallbacks as $before) {
-            if (! is_null($result = $before(...$arguments))) {
+            if (! is_null($result = call_user_func_array($before, $arguments))) {
                 return $result;
             }
         }
@@ -298,7 +302,7 @@ class Gate implements GateContract
         $arguments = array_merge([$user, $ability, $result], [$arguments]);
 
         foreach ($this->afterCallbacks as $after) {
-            $after(...$arguments);
+            call_user_func_array($after, $arguments);
         }
     }
 
@@ -355,11 +359,20 @@ class Gate implements GateContract
         return function () use ($user, $ability, $arguments) {
             $instance = $this->getPolicyFor($arguments[0]);
 
-            // If we receive a non-null result from the before method, we will return it
-            // as the final result. This will allow developers to override the checks
-            // in the policy to return a result for all rules defined in the class.
             if (method_exists($instance, 'before')) {
-                if (! is_null($result = $instance->before($user, $ability, ...$arguments))) {
+                // We will prepend the user and ability onto the arguments so that the before
+                // callback can determine which ability is being called. Then we will call
+                // into the policy before methods with the arguments and get the result.
+                $beforeArguments = array_merge([$user, $ability], $arguments);
+
+                $result = call_user_func_array(
+                    [$instance, 'before'], $beforeArguments
+                );
+
+                // If we received a non-null result from the before method, we will return it
+                // as the result of a check. This allows developers to override the checks
+                // in the policy and return a result for all rules defined in the class.
+                if (! is_null($result)) {
                     return $result;
                 }
             }
@@ -368,18 +381,13 @@ class Gate implements GateContract
                 $ability = Str::camel($ability);
             }
 
-            // If the first argument is a string, that means they are passing a class name
-            // to the policy. We will remove the first argument from this argument list
-            // because the policy already knows what type of models it can authorize.
-            if (isset($arguments[0]) && is_string($arguments[0])) {
-                array_shift($arguments);
-            }
-
             if (! is_callable([$instance, $ability])) {
                 return false;
             }
 
-            return $instance->{$ability}($user, ...$arguments);
+            return call_user_func_array(
+                [$instance, $ability], array_merge([$user], $arguments)
+            );
         };
     }
 

@@ -42,14 +42,8 @@ class BroadcastEvent
         $name = method_exists($event, 'broadcastAs')
                 ? $event->broadcastAs() : get_class($event);
 
-        $channels = $event->broadcastOn();
-
-        if (! is_array($channels)) {
-            $channels = [$channels];
-        }
-
         $this->broadcaster->broadcast(
-            $channels, $name, $this->getPayloadFromEvent($event)
+            $event->broadcastOn(), $name, $this->getPayloadFromEvent($event)
         );
 
         $job->delete();
@@ -64,9 +58,7 @@ class BroadcastEvent
     protected function getPayloadFromEvent($event)
     {
         if (method_exists($event, 'broadcastWith')) {
-            return array_merge(
-                $event->broadcastWith(), ['socket' => data_get($event, 'socket')]
-            );
+            return $event->broadcastWith();
         }
 
         $payload = [];

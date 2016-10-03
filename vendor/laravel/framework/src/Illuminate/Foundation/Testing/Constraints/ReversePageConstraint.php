@@ -42,7 +42,11 @@ class ReversePageConstraint extends PageConstraint
      */
     protected function getFailureDescription()
     {
-        return $this->pageConstraint->getReverseFailureDescription();
+        return str_replace(
+            ['contains', 'is', 'has'],
+            ['does not contain', 'is not', 'does not have'],
+            $this->pageConstraint->getFailureDescription()
+        );
     }
 
     /**

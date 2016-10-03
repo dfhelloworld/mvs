@@ -50,7 +50,7 @@ class DatabaseSessionHandler implements SessionHandlerInterface, ExistenceAwareI
      *
      * @param  \Illuminate\Database\ConnectionInterface  $connection
      * @param  string  $table
-     * @param  int  $minutes
+     * @param  string  $minutes
      * @param  \Illuminate\Contracts\Container\Container|null  $container
      * @return void
      */

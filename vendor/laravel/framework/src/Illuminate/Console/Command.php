@@ -228,16 +228,6 @@ class Command extends SymfonyCommand
     }
 
     /**
-     * Get all of the arguments passed to the command.
-     *
-     * @return array
-     */
-    public function arguments()
-    {
-        return $this->argument();
-    }
-
-    /**
      * Determine if the given option is present.
      *
      * @param  string  $name
@@ -261,16 +251,6 @@ class Command extends SymfonyCommand
         }
 
         return $this->input->getOption($key);
-    }
-
-    /**
-     * Get all of the options passed to the command.
-     *
-     * @return array
-     */
-    public function options()
-    {
-        return $this->option();
     }
 
     /**

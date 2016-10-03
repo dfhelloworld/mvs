@@ -2,12 +2,10 @@
 
 namespace Illuminate\Broadcasting\Broadcasters;
 
-use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
+use Illuminate\Contracts\Broadcasting\Broadcaster;
 use Illuminate\Contracts\Redis\Database as RedisDatabase;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 
-class RedisBroadcaster extends Broadcaster
+class RedisBroadcaster implements Broadcaster
 {
     /**
      * The Redis instance.
@@ -37,61 +35,15 @@ class RedisBroadcaster extends Broadcaster
     }
 
     /**
-     * Authenticate the incoming request for a given channel.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return mixed
-     */
-    public function auth($request)
-    {
-        if (Str::startsWith($request->channel_name, ['private-', 'presence-']) &&
-            ! $request->user()) {
-            throw new HttpException(403);
-        }
-
-        return parent::verifyUserCanAccessChannel(
-            $request, str_replace(['private-', 'presence-'], '', $request->channel_name)
-        );
-    }
-
-    /**
-     * Return the valid authentication response.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  mixed  $result
-     * @return mixed
-     */
-    public function validAuthenticationResponse($request, $result)
-    {
-        if (is_bool($result)) {
-            return json_encode($result);
-        }
-
-        return json_encode(['channel_data' => [
-            'user_id' => $request->user()->getKey(),
-            'user_info' => $result,
-        ]]);
-    }
-
-    /**
-     * Broadcast the given event.
-     *
-     * @param  array  $channels
-     * @param  string  $event
-     * @param  array  $payload
-     * @return void
+     * {@inheritdoc}
      */
     public function broadcast(array $channels, $event, array $payload = [])
     {
         $connection = $this->redis->connection($this->connection);
 
-        $socket = Arr::pull($payload, 'socket');
+        $payload = json_encode(['event' => $event, 'data' => $payload]);
 
-        $payload = json_encode([
-            'event' => $event, 'data' => $payload, 'socket' => $socket,
-        ]);
-
-        foreach ($this->formatChannels($channels) as $channel) {
+        foreach ($channels as $channel) {
             $connection->publish($channel, $payload);
         }
     }

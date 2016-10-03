@@ -11,10 +11,6 @@
 
 namespace Symfony\Component\HttpKernel\Tests\DataCollector;
 
-use Symfony\Component\HttpFoundation\Session\Session;
-use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
-use Symfony\Component\HttpKernel\Controller\ArgumentResolverInterface;
-use Symfony\Component\HttpKernel\Event\FilterResponseEvent;
 use Symfony\Component\HttpKernel\HttpKernel;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpKernel\DataCollector\RequestDataCollector;
@@ -55,20 +51,6 @@ class RequestDataCollectorTest extends \PHPUnit_Framework_TestCase
         $this->assertSame('application/json', $c->getContentType());
     }
 
-    public function testKernelResponseDoesNotStartSession()
-    {
-        $kernel = $this->getMock(HttpKernelInterface::class);
-        $request = new Request();
-        $session = new Session(new MockArraySessionStorage());
-        $request->setSession($session);
-        $response = new Response();
-
-        $c = new RequestDataCollector();
-        $c->onKernelResponse(new FilterResponseEvent($kernel, $request, HttpKernelInterface::MASTER_REQUEST, $response));
-
-        $this->assertFalse($session->isStarted());
-    }
-
     /**
      * Test various types of controller callables.
      */
@@ -84,7 +66,7 @@ class RequestDataCollectorTest extends \PHPUnit_Framework_TestCase
                 '"Regular" callable',
                 array($this, 'testControllerInspection'),
                 array(
-                    'class' => __NAMESPACE__.'\RequestDataCollectorTest',
+                    'class' => 'Symfony\Component\HttpKernel\Tests\DataCollector\RequestDataCollectorTest',
                     'method' => 'testControllerInspection',
                     'file' => __FILE__,
                     'line' => $r1->getStartLine(),
@@ -104,13 +86,8 @@ class RequestDataCollectorTest extends \PHPUnit_Framework_TestCase
 
             array(
                 'Static callback as string',
-                __NAMESPACE__.'\RequestDataCollectorTest::staticControllerMethod',
-                array(
-                    'class' => 'Symfony\Component\HttpKernel\Tests\DataCollector\RequestDataCollectorTest',
-                    'method' => 'staticControllerMethod',
-                    'file' => __FILE__,
-                    'line' => $r2->getStartLine(),
-                ),
+                'Symfony\Component\HttpKernel\Tests\DataCollector\RequestDataCollectorTest::staticControllerMethod',
+                'Symfony\Component\HttpKernel\Tests\DataCollector\RequestDataCollectorTest::staticControllerMethod',
             ),
 
             array(
@@ -209,7 +186,7 @@ class RequestDataCollectorTest extends \PHPUnit_Framework_TestCase
     protected function injectController($collector, $controller, $request)
     {
         $resolver = $this->getMock('Symfony\\Component\\HttpKernel\\Controller\\ControllerResolverInterface');
-        $httpKernel = new HttpKernel(new EventDispatcher(), $resolver, null, $this->getMock(ArgumentResolverInterface::class));
+        $httpKernel = new HttpKernel(new EventDispatcher(), $resolver);
         $event = new FilterControllerEvent($httpKernel, $controller, $request, HttpKernelInterface::MASTER_REQUEST);
         $collector->onKernelController($event);
     }

@@ -31,7 +31,7 @@ class NullStore extends TaggableStore implements Store
      *
      * @param  string  $key
      * @param  mixed   $value
-     * @param  float|int  $minutes
+     * @param  int     $minutes
      * @return void
      */
     public function put($key, $value, $minutes)
